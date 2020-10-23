@@ -66,7 +66,7 @@ extern void delayUs(uint16_t micros);
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern TIM_HandleTypeDef htim10;
+extern TIM_HandleTypeDef htim11;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -208,52 +208,53 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles TIM1 update interrupt and TIM10 global interrupt.
+  * @brief This function handles EXTI line2 interrupt.
   */
-void TIM1_UP_TIM10_IRQHandler(void)
+void EXTI2_IRQHandler(void)
 {
-  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 0 */
-	bitNumber++;
-	GPIO_PinState value = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_12);
-	remoteCode = (remoteCode << 1) | value;
-	
-	if(bitNumber == 15) {
-		HAL_TIM_Base_Stop_IT(&htim10);
-		if(remoteCode != 0x7FFF) {
-			command = remoteCode & 0x3F;
-
-		}
-		bitNumber = 0;
-		remoteCode = 0;
-		HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+  /* USER CODE BEGIN EXTI2_IRQn 0 */
+	if(bitNumber++ == 0) {
+			//delayUs(150);
+			HAL_TIM_Base_Start_IT(&htim11);
+			HAL_NVIC_DisableIRQ(EXTI2_IRQn);
+			TIM10->CNT = 0;
+			remoteCode = (remoteCode << 1 | 1);
 	}
- 
-  /* USER CODE END TIM1_UP_TIM10_IRQn 0 */
-  HAL_TIM_IRQHandler(&htim10);
-  /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 1 */
+  /* USER CODE END EXTI2_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
+  /* USER CODE BEGIN EXTI2_IRQn 1 */
 
-  /* USER CODE END TIM1_UP_TIM10_IRQn 1 */
+  /* USER CODE END EXTI2_IRQn 1 */
 }
 
 /**
-  * @brief This function handles EXTI line[15:10] interrupts.
+  * @brief This function handles TIM1 trigger and commutation interrupts and TIM11 global interrupt.
   */
-void EXTI15_10_IRQHandler(void)
+void TIM1_TRG_COM_TIM11_IRQHandler(void)
 {
-  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
-	if(bitNumber++ == 0) {
-			delayUs(100);
-			HAL_TIM_Base_Start_IT(&htim10);
-			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
-			TIM10->CNT = 0;
-			remoteCode = (remoteCode << 1 | 1);
+  /* USER CODE BEGIN TIM1_TRG_COM_TIM11_IRQn 0 */
+	
+	bitNumber++;
+	GPIO_PinState value = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2);
+	remoteCode = (remoteCode << 1) | value;
+	
+	if(bitNumber == 15) {
+		HAL_TIM_Base_Stop_IT(&htim11);
+		if(remoteCode != 0xFFFF) {
+			command = remoteCode & 0x3F;
+			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
 		}
-  /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
-  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+		bitNumber = 0;
+		remoteCode = 0;
+		HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+	}
+	
+	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+  /* USER CODE END TIM1_TRG_COM_TIM11_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim11);
+  /* USER CODE BEGIN TIM1_TRG_COM_TIM11_IRQn 1 */
 
-  /* USER CODE END EXTI15_10_IRQn 1 */
+  /* USER CODE END TIM1_TRG_COM_TIM11_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */
