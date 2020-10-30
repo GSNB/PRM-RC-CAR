@@ -37,21 +37,13 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-void goForward(){
-	GPIOB->ODR = (GPIOB->ODR & 1111101111000111);
-	GPIOB->ODR = (GPIOB->ODR & 1111101111000111) | 1 << 5 | 1 << 10;
-}
-void goBack(){
-	GPIOB->ODR = (GPIOB->ODR & 1111101111000111);
-}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-extern uint8_t bitNumber;
-extern uint16_t remoteCode;
-uint8_t flag = 0;
-uint8_t command = 0;
+extern uint8_t timerFlag;
+extern uint16_t time;
+extern TIM_HandleTypeDef htim4;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -208,45 +200,12 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles EXTI line2 interrupt.
-  */
-void EXTI2_IRQHandler(void)
-{
-  /* USER CODE BEGIN EXTI2_IRQn 0 */
-	if(bitNumber++ == 0) {
-			delayUs(100);
-			HAL_TIM_Base_Start_IT(&htim4);
-			HAL_NVIC_DisableIRQ(EXTI2_IRQn);
-			TIM4->CNT = 0;
-			remoteCode = (remoteCode << 1 | 1);
-	}
-  /* USER CODE END EXTI2_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_2);
-  /* USER CODE BEGIN EXTI2_IRQn 1 */
-
-  /* USER CODE END EXTI2_IRQn 1 */
-}
-
-/**
   * @brief This function handles TIM4 global interrupt.
   */
 void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
-	bitNumber++;
-	GPIO_PinState value = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_2);
-	remoteCode = (remoteCode << 1) | value;
-	
-	if(bitNumber == 15) {
-		HAL_TIM_Base_Stop_IT(&htim4);
-		if(remoteCode != 0x7FFF) {
-			command = remoteCode & 0x3F;
-			HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-		}
-		bitNumber = 0;
-		remoteCode = 0;
-		HAL_NVIC_EnableIRQ(EXTI2_IRQn);
-	}
+	time++;
   /* USER CODE END TIM4_IRQn 0 */
   HAL_TIM_IRQHandler(&htim4);
   /* USER CODE BEGIN TIM4_IRQn 1 */
