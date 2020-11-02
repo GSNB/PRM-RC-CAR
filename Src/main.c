@@ -46,8 +46,13 @@ TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN PV */
 volatile uint8_t timerFlag = 0;
 volatile uint16_t time = 0;
-volatile uint8_t seconds = 0;
+volatile uint8_t taskSeconds = 0;
+volatile uint8_t globalSeconds = 0;
 volatile uint8_t timeState = 0;
+volatile uint8_t buttonPressTime  = 0;
+volatile uint8_t buttonFlag = 0;
+volatile uint8_t programFlag = 0;
+volatile uint8_t program = 0;
 
 /* USER CODE END PV */
 
@@ -119,43 +124,176 @@ void stop()
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 }
 
+void setProgram() 
+{
+	uint8_t pinstate = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13);
+	if(buttonFlag == 1) 
+	{
+		buttonPressTime = globalSeconds;
+		buttonFlag = 2;
+		HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
+	} 
+	else if(buttonFlag == 2  && buttonPressTime + 3 <= globalSeconds && pinstate == 0)
+	{
+		if(programFlag == 0)
+		{
+			programFlag = 1;
+		} else if (programFlag ==1)
+		{
+			programFlag = 0;
+		}
+		buttonFlag = 0;
+		HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+	} 
+	else if(pinstate == 1 && buttonFlag == 2) 
+	{
+		program++;
+		if(program == 5) 
+		{
+			program = 0;
+		}
+		
+		timeState = 0;
+		
+		switch(program)
+		{
+			case 0:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+				break;
+			case 1:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+				break;
+			case 2:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+				break;
+			case 3:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_SET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+				break;
+			case 4:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_SET);
+				break;
+			default:
+				HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED4_GPIO_Port, LED4_Pin, GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(LED5_GPIO_Port, LED5_Pin, GPIO_PIN_RESET);
+				break;
+		}
+		delayUs(150);
+		buttonFlag = 0;
+		HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+	}
+	
+}
+
 void _setTaskTimeInSeconds(volatile uint8_t condition)
 {
-	if(seconds%condition==0 && seconds!=0)
+	if(taskSeconds%condition==0 && taskSeconds!=0)
 	{
-		seconds = 0;
+		taskSeconds = 0;
 		timeState++;
 	}
 }
 
-void _3secondsTask()
+void setSpeed(uint8_t speed) {
+	uint16_t mapSpeed = speed * 47998 / 255;
+	TIM3->CCR1 = mapSpeed;
+	TIM3->CCR3 = mapSpeed;
+}
+
+void task_1()
 {
-	if(seconds%3==0 && seconds!=0)
+	switch(timeState)
 	{
-		seconds = 0;
-		timeState++;
+		case 0:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+		case 1:
+			_setTaskTimeInSeconds(3);
+			forward();
+			break;
+		case 2:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+		case 3:
+			_setTaskTimeInSeconds(3);
+			rotateLeft();
+			break;
+		default:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
 	}
+	if(timeState==4)
+		timeState=0;
 }
 
-void _5secondsTask()
+void task_2()
 {
-	if(seconds%5==0 && seconds!=0)
+	switch(timeState)
 	{
-		seconds = 0;
-		timeState++;
+		case 0:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+		case 1:
+			_setTaskTimeInSeconds(5);
+			left();
+			break;
+		default:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
 	}
+	if(timeState==2)
+		timeState=1;
 }
 
-void _10secondsTask()
+void task_3()
 {
-	if(seconds%10==0 && seconds!=0)
+	switch(timeState)
 	{
-		seconds = 0;
-		timeState++;
+		case 0:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+		case 1:
+			_setTaskTimeInSeconds(5);
+			right();
+			break;
+		default:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
 	}
+	if(timeState==2)
+		timeState=1;
 }
 
-void taskScheduler()
+void task_4()
 {
 	switch(timeState)
 	{
@@ -168,20 +306,82 @@ void taskScheduler()
 			forward();
 			break;
 		case 2:
-			_setTaskTimeInSeconds(3);
+			_setTaskTimeInSeconds(1);
 			stop();
 			break;
 		case 3:
-			_setTaskTimeInSeconds(3);
+			_setTaskTimeInSeconds(4);
 			rotateLeft();
 			break;
 		default:
-			_3secondsTask();
+			_setTaskTimeInSeconds(3);
 			stop();
 			break;
 	}
 	if(timeState==4)
 		timeState=0;
+}
+
+void task_5()
+{
+	switch(timeState)
+	{
+		case 0:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+		case 1:
+			_setTaskTimeInSeconds(5);
+			rotateRight();
+			break;
+		default:
+			_setTaskTimeInSeconds(3);
+			stop();
+			break;
+	}
+	if(timeState==2)
+		timeState=1;
+}
+
+
+
+void taskScheduler()
+{
+	if(programFlag == 1)
+	{
+		switch(program)
+		{
+			case 0:
+				setSpeed(128);
+				task_1();
+				break;
+			case 1:
+				setSpeed(128);
+				task_2();
+				break;
+			case 2:
+				setSpeed(128);
+				task_3();
+				break;
+			case 3:
+				setSpeed(128);
+				task_4();
+				break;
+			case 4:
+				setSpeed(255);
+				task_5();
+				break;
+			default:
+				_setTaskTimeInSeconds(3);
+				stop();
+				break;
+		}
+	}
+	else
+	{
+		stop();
+		timeState = 0;
+	}
 }
 	
 /* USER CODE END 0 */
@@ -193,7 +393,7 @@ void taskScheduler()
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -222,30 +422,23 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
 	HAL_TIM_Base_Start_IT(&htim4);
 	TIM4->CNT = 0;
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	
-	/*HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-	
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);*/
-	
-	
-	
+	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-			if(time%1000==0 && time!=0) 
-			{
-				seconds++;
-				time = 0;
-			}
-			taskScheduler();
+		setProgram();
+		if(time%1000==0 && time!=0) 
+		{
+			taskSeconds++;
+			globalSeconds++;
+			time = 0;
+		}
+		taskScheduler();
     /* USER CODE END WHILE */
-		
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -451,6 +644,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 }
 
