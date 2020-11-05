@@ -222,6 +222,7 @@ void setSpeed(uint8_t speed) {
 	TIM3->CCR3 = mapSpeed;
 }
 
+//Podprogram - jazda po obwodzie kwadratu
 void task_1()
 {
 	switch(timeState)
@@ -239,7 +240,7 @@ void task_1()
 			stop();
 			break;
 		case 3:
-			_setTaskTimeInSeconds(3);
+			_setTaskTimeInSeconds(2);
 			rotateLeft();
 			break;
 		default:
@@ -251,6 +252,7 @@ void task_1()
 		timeState=0;
 }
 
+//Podprogram - jazda po obwodzie okregu w lewo
 void task_2()
 {
 	switch(timeState)
@@ -272,6 +274,7 @@ void task_2()
 		timeState=1;
 }
 
+//Podprogram - jazda po obwodzie okregu w prawo
 void task_3()
 {
 	switch(timeState)
@@ -293,6 +296,7 @@ void task_3()
 		timeState=1;
 }
 
+//Podprogram - jazda po obwodzie trójkata
 void task_4()
 {
 	switch(timeState)
@@ -302,15 +306,15 @@ void task_4()
 			stop();
 			break;
 		case 1:
-			_setTaskTimeInSeconds(5);
+			_setTaskTimeInSeconds(3);
 			forward();
 			break;
 		case 2:
-			_setTaskTimeInSeconds(1);
+			_setTaskTimeInSeconds(3);
 			stop();
 			break;
 		case 3:
-			_setTaskTimeInSeconds(4);
+			_setTaskTimeInSeconds(3);
 			rotateLeft();
 			break;
 		default:
@@ -322,6 +326,7 @@ void task_4()
 		timeState=0;
 }
 
+//Podprogram - krecenie baczka w prawo
 void task_5()
 {
 	switch(timeState)
@@ -352,19 +357,19 @@ void taskScheduler()
 		switch(program)
 		{
 			case 0:
-				setSpeed(128);
+				setSpeed(160);
 				task_1();
 				break;
 			case 1:
-				setSpeed(128);
+				setSpeed(180);
 				task_2();
 				break;
 			case 2:
-				setSpeed(128);
+				setSpeed(180);
 				task_3();
 				break;
 			case 3:
-				setSpeed(128);
+				setSpeed(156);
 				task_4();
 				break;
 			case 4:
